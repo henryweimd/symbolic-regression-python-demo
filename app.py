@@ -8,6 +8,7 @@ import os
 # Fix for Streamlit Cloud PermissionError during Julia installation
 os.environ["JULIA_DEPOT_PATH"] = "/tmp/julia_depot"
 os.environ["PYTHON_JULIAPKG_PROJECT"] = "/tmp/juliapkg_project"
+os.environ["JULIA_NUM_THREADS"] = "1"  # Prevent OOM memory crash during compilation
 
 from pysr import PySRRegressor
 import plotly.express as px
