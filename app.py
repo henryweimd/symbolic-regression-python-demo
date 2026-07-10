@@ -1,0 +1,115 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
+from pysr import PySRRegressor
+import plotly.express as px
+
+st.set_page_config(layout="wide", page_title="Symbolic Regression vs Linear Regression")
+
+st.title("Symbolic Regression vs Linear Regression")
+st.markdown("This dashboard demonstrates how **Symbolic Regression** (via Evolutionary AI) discovers complex non-linear mathematical equations from data, outperforming traditional Linear Regression on datasets with hidden interactions or noise.")
+
+# --- Sidebar ---
+st.sidebar.header("1. Choose Dataset")
+dataset_choice = st.sidebar.radio(
+    "Select Dataset",
+    ["Parkinson's Disease (Clinical Data)", "Medical Insurance (Actuarial Data)"]
+)
+
+if dataset_choice == "Parkinson's Disease (Clinical Data)":
+    st.sidebar.markdown("**Parkinson's Data:** Noisy clinical measurements of vocal cord degradation. Target is `motor_UPDRS` (severity score).")
+else:
+    st.sidebar.markdown("**Insurance Data:** Clean actuarial data. The target is `charges`. Contains a hidden `bmi * smoker` interaction that Linear Regression fails on.")
+
+st.sidebar.header("2. Evolutionary AI Parameters")
+populations = st.sidebar.slider("Population Size (Equations per generation)", min_value=10, max_value=200, value=50, step=10)
+niterations = st.sidebar.slider("Generations (Evolution cycles)", min_value=10, max_value=200, value=30, step=10)
+parsimony = st.sidebar.slider("Complexity Penalty", min_value=0.0, max_value=0.1, value=0.01, step=0.01)
+
+run_button = st.sidebar.button("Run AI Evolution", type="primary")
+
+# --- Data Loading ---
+@st.cache_data
+def load_data(choice):
+    if choice == "Parkinson's Disease (Clinical Data)":
+        df = pd.read_csv("parkinsons_updrs.data")
+        # Rename for easier parsing
+        df = df.rename(columns={"Jitter(Abs)": "JitterAbs"})
+        # Sample to 300 rows for speed in demo
+        df = df.sample(n=min(300, len(df)), random_state=42)
+        X = df[['age', 'JitterAbs', 'Shimmer', 'HNR', 'PPE']]
+        y = df['motor_UPDRS']
+        return df, X, y, "motor_UPDRS"
+    else:
+        df = pd.read_csv("insurance.csv")
+        df['smoker'] = df['smoker'].map({'yes': 1, 'no': 0})
+        df = df.sample(n=min(300, len(df)), random_state=42)
+        X = df[['age', 'bmi', 'smoker']]
+        y = df['charges']
+        return df, X, y, "charges"
+
+df, X, y, target_col = load_data(dataset_choice)
+
+st.write("### Data Preview")
+st.dataframe(df.head())
+
+# --- Model Execution ---
+if run_button:
+    col1, col2 = st.columns(2)
+    
+    # 1. Linear Regression
+    with col1:
+        st.subheader("📊 Traditional Linear Regression")
+        lm = LinearRegression()
+        lm.fit(X, y)
+        lm_preds = lm.predict(X)
+        lm_r2 = r2_score(y, lm_preds)
+        
+        # Build LM Equation String
+        intercept = lm.intercept_
+        coefs = lm.coef_
+        eq_terms = [f"{coef:.2f} * {col}" for coef, col in zip(coefs, X.columns)]
+        lm_eq = f"{target_col} = {intercept:.2f} + " + " + ".join(eq_terms)
+        
+        st.info(f"**R-Squared:** {lm_r2:.4f}")
+        st.markdown("**Discovered Equation:**")
+        st.code(lm_eq, language="python")
+        
+        # Plot
+        fig_lm = px.scatter(x=y, y=lm_preds, labels={'x': f'Actual {target_col}', 'y': f'Predicted {target_col}'}, title="Linear Regression: Actual vs Predicted")
+        fig_lm.add_shape(type="line", x0=y.min(), y0=y.min(), x1=y.max(), y1=y.max(), line=dict(color="red", dash="dash"))
+        st.plotly_chart(fig_lm, use_container_width=True)
+        
+    # 2. Symbolic Regression (PySR)
+    with col2:
+        st.subheader("🧬 Evolutionary AI (Symbolic Regression)")
+        with st.spinner("Breeding equations... this may take a moment."):
+            # Configure PySR
+            model = PySRRegressor(
+                niterations=niterations,
+                populations=populations,
+                binary_operators=["+", "-", "*", "/"],
+                unary_operators=["sin", "cos", "exp"],
+                parsimony_penalty=parsimony,
+                verbosity=0,
+                random_state=42,
+                deterministic=True,
+                procs=1,
+                multithreading=False # safer for cloud hosting environments
+            )
+            model.fit(X, y)
+            
+            pysr_preds = model.predict(X)
+            pysr_r2 = r2_score(y, pysr_preds)
+            best_eq = model.sympy()
+            
+        st.success(f"**R-Squared:** {pysr_r2:.4f}")
+        st.markdown("**Discovered Equation:**")
+        st.code(f"{target_col} = {best_eq}", language="python")
+        
+        # Plot
+        fig_sr = px.scatter(x=y, y=pysr_preds, labels={'x': f'Actual {target_col}', 'y': f'Predicted {target_col}'}, title="Symbolic Regression: Actual vs Predicted")
+        fig_sr.add_shape(type="line", x0=y.min(), y0=y.min(), x1=y.max(), y1=y.max(), line=dict(color="red", dash="dash"))
+        st.plotly_chart(fig_sr, use_container_width=True)
