@@ -9,6 +9,7 @@ import os
 os.environ["JULIA_DEPOT_PATH"] = "/tmp/julia_depot"
 os.environ["PYTHON_JULIAPKG_PROJECT"] = "/tmp/juliapkg_project"
 os.environ["JULIA_NUM_THREADS"] = "1"  # Prevent OOM memory crash during compilation
+os.environ["JULIA_PKG_PRECOMPILE_AUTO"] = "0"  # Disable aggressive precompilation to prevent boot timeouts and OOM. Defers to JIT.
 
 from pysr import PySRRegressor
 import plotly.express as px
