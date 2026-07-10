@@ -3,6 +3,12 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
+import os
+
+# Fix for Streamlit Cloud PermissionError during Julia installation
+os.environ["JULIA_DEPOT_PATH"] = "/tmp/julia_depot"
+os.environ["PYTHON_JULIAPKG_PROJECT"] = "/tmp/juliapkg_project"
+
 from pysr import PySRRegressor
 import plotly.express as px
 
