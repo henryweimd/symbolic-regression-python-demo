@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 import os
+import threading
 
 import os
 
@@ -17,6 +18,20 @@ os.environ["JULIA_PKG_PRECOMPILE_AUTO"] = "0"  # Disable aggressive precompilati
 import plotly.express as px
 
 st.set_page_config(layout="wide", page_title="Symbolic Regression vs Linear Regression")
+
+@st.cache_resource
+def start_julia_background_compilation():
+    def _compile():
+        try:
+            from pysr import PySRRegressor
+        except Exception as e:
+            print(f"Background compilation failed: {e}")
+            
+    t = threading.Thread(target=_compile)
+    t.start()
+    return True
+
+start_julia_background_compilation()
 
 st.title("Symbolic Regression vs Linear Regression")
 st.markdown("This dashboard demonstrates how **Symbolic Regression** (via Evolutionary AI) discovers complex non-linear mathematical equations from data, outperforming traditional Linear Regression on datasets with hidden interactions or noise.")
