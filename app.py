@@ -14,7 +14,6 @@ os.environ["PYTHON_JULIAPKG_PROJECT"] = os.path.expanduser("~/.juliapkg")
 os.environ["JULIA_NUM_THREADS"] = "1"  # Prevent OOM memory crash during compilation
 os.environ["JULIA_PKG_PRECOMPILE_AUTO"] = "0"  # Disable aggressive precompilation to prevent boot timeouts and OOM. Defers to JIT.
 
-from pysr import PySRRegressor
 import plotly.express as px
 
 st.set_page_config(layout="wide", page_title="Symbolic Regression vs Linear Regression")
@@ -97,6 +96,7 @@ if run_button:
     with col2:
         st.subheader("🧬 Evolutionary AI (Symbolic Regression)")
         with st.spinner("Breeding equations... this may take a moment."):
+            from pysr import PySRRegressor
             # Configure PySR
             model = PySRRegressor(
                 niterations=niterations,
