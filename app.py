@@ -7,11 +7,10 @@ import os
 
 import os
 
-# Fix for Streamlit Cloud PermissionError and environment wiping
-# Use the local repository directory for Julia installation so it persists across boots
-repo_dir = os.path.dirname(os.path.abspath(__file__))
-os.environ["JULIA_DEPOT_PATH"] = os.path.join(repo_dir, ".julia_depot")
-os.environ["PYTHON_JULIAPKG_PROJECT"] = os.path.join(repo_dir, ".juliapkg")
+# Fix for Streamlit Cloud PermissionError, wiping, and Watchdog crashes
+# Install Julia into the home directory (writable, persistent, and ignored by Streamlit's file watcher)
+os.environ["JULIA_DEPOT_PATH"] = os.path.expanduser("~/.julia_depot")
+os.environ["PYTHON_JULIAPKG_PROJECT"] = os.path.expanduser("~/.juliapkg")
 os.environ["JULIA_NUM_THREADS"] = "1"  # Prevent OOM memory crash during compilation
 os.environ["JULIA_PKG_PRECOMPILE_AUTO"] = "0"  # Disable aggressive precompilation to prevent boot timeouts and OOM. Defers to JIT.
 
