@@ -5,6 +5,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 import os
 import threading
+import time
 
 import os
 
@@ -20,12 +21,21 @@ import plotly.express as px
 st.set_page_config(layout="wide", page_title="Symbolic Regression vs Linear Regression")
 
 @st.cache_resource
+def get_compilation_status():
+    return {"done": False, "start_time": None, "error": None}
+
+compilation_status = get_compilation_status()
+
+@st.cache_resource
 def start_julia_background_compilation():
     def _compile():
+        compilation_status["start_time"] = time.time()
         try:
             from pysr import PySRRegressor
+            compilation_status["done"] = True
         except Exception as e:
-            print(f"Background compilation failed: {e}")
+            compilation_status["error"] = str(e)
+            compilation_status["done"] = True
             
     t = threading.Thread(target=_compile)
     t.start()
@@ -54,6 +64,22 @@ niterations = st.sidebar.slider("Generations (Evolution cycles)", min_value=10, 
 parsimony = st.sidebar.slider("Complexity Penalty", min_value=0.0, max_value=0.1, value=0.01, step=0.01)
 
 run_button = st.sidebar.button("Run AI Evolution", type="primary")
+
+st.sidebar.markdown("---")
+
+@st.fragment(run_every=1)
+def show_compilation_status():
+    if not compilation_status["done"] and compilation_status["start_time"] is not None:
+        elapsed = int(time.time() - compilation_status["start_time"])
+        estimated = 180  # ~3 minutes based on logs
+        progress = min(elapsed / estimated, 0.99)  # Hold at 99% until truly done
+        st.sidebar.progress(progress, text=f"⚙️ Precompiling Julia engine... ({elapsed}s / ~180s)")
+    elif compilation_status["done"] and not compilation_status["error"]:
+        st.sidebar.success("✅ Julia math engine ready!")
+    elif compilation_status["error"]:
+        st.sidebar.error(f"⚠️ Compilation failed: {compilation_status['error']}")
+
+show_compilation_status()
 
 # --- Data Loading ---
 @st.cache_data
